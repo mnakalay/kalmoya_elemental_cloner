@@ -119,7 +119,7 @@ class ElementalClonerTool
         if ($this->themeDirectoryExists()) {
             throw new Exception(
                 t(
-                    'The directory %s already exists. Please use a different handle.',
+                    'A theme with handle %s already exists in the application/themes directory. Please use a different handle.',
                     '&ldquo;' . $this->destDir . '&rdquo;'
                 )
             );
@@ -289,7 +289,7 @@ class ElementalClonerTool
 
         $thumb = $im->getThumbnail($image, '360', '270', true);
         $this->fs->delete($this->destDir . '/thumbnail.png');
-        $thumbSrc = ltrim((string)Url::createFromUrl($thumb->src)->getPath(), '/');
+        $thumbSrc = ltrim((string) Url::createFromUrl($thumb->src)->getPath(), '/');
         $relPath = trim($this->app->make('app_relative_path'), '/');
         $thumbSrc = str_replace($relPath, '', $thumbSrc);
 
