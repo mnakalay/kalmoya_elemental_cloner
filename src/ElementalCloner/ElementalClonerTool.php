@@ -17,7 +17,15 @@ class ElementalClonerTool
 {
     protected $sourceDir;
     protected $destDir;
-    protected $handle;
+    protected $pkgDir;
+    protected $themeHandle;
+    protected $pkgHandle;
+    protected $pkgAppVersion;
+    protected $pkgVersion;
+    protected $pkgDescription;
+    protected $pkgName;
+    protected $pkgIcon;
+    protected $buildPackage = false;
     protected $token;
     protected $action;
     protected $fs;
@@ -33,16 +41,16 @@ class ElementalClonerTool
     public function __construct(Application $app, $settings = [])
     {
         extract($settings);
-        $this->app = $app;
 
-        $this->handle = $handle;
-        $this->destDir = DIRNAME_APPLICATION . '/' . DIRNAME_THEMES . '/' . $handle;
-        $this->sourceDir = DIR_FILES_THEMES_CORE . '/elemental';
+        $this->app = $app;
         $this->fs = $this->getFlysystemClass();
         $this->fh = $app->make('helper/file');
         $this->th = $app->make('helper/text');
         $this->vals = $app->make('helper/validation/strings');
         $this->valt = $app->make('token');
+
+        $this->themeHandle = $handle;
+        $this->sourceDir = DIR_FILES_THEMES_CORE . '/elemental';
 
         $this->token = $token;
         $this->action = $action;
@@ -53,6 +61,26 @@ class ElementalClonerTool
         $this->googleFonts = $googleFonts;
         $this->fID = $fID;
         $this->filename = $filename;
+        $buildPackage = isset($buildPackage) ? $buildPackage : false;
+        if ($buildPackage && $this->vals->notEmpty($pkgHandle)) {
+            $this->pkgHandle = $pkgHandle;
+            $this->pkgIcon = $pkgIcon;
+            $this->pkgfID = $pkgfID;
+            $this->pkgThumbSource = $pkgThumbSource;
+            if ('package' === $action) {
+                $this->pkgAppVersion = empty($pkgAppVersion) ? "8.0.0" : $pkgAppVersion;
+                $this->pkgVersion = empty($pkgVersion) ? "0.9" : $pkgVersion;
+                $this->pkgDescription = empty($pkgDescription) ? t("Install theme %s", $this->themeNewName) : $pkgDescription;
+                $this->pkgName = empty($this->pkgName) ? $this->th->unhandle($pkgHandle) : $this->pkgName;
+            }
+
+            $this->buildPackage = $buildPackage;
+            $this->pkgDir = DIRNAME_PACKAGES . '/' . $pkgHandle;
+            $this->destDir = $this->pkgDir . '/' . DIRNAME_THEMES . '/' . $handle;
+            \Log::addEntry('dest is ' . $this->destDir);
+        } else {
+            $this->destDir = DIRNAME_APPLICATION . '/' . DIRNAME_THEMES . '/' . $handle;
+        }
     }
 
     protected function getFlysystemClass()
@@ -70,6 +98,13 @@ class ElementalClonerTool
         return $this->fs->has($this->destDir . $fragment);
     }
 
+    public function packageDirectoryExists($fragment = '')
+    {
+        $fragment = !empty($fragment) ? '/' . trim($fragment, '/') : $fragment;
+
+        return $this->fs->has($this->pkgDir . $fragment);
+    }
+
     public function process($doCleanup = false)
     {
         if (empty($this->action)) {
@@ -78,6 +113,9 @@ class ElementalClonerTool
 
         try {
             switch ($this->action) {
+                case 'package':
+                    $ret = $this->buildPackage();
+                    break;
                 case 'clone':
                     $ret = $this->cloneTheme();
                     break;
@@ -95,9 +133,12 @@ class ElementalClonerTool
                     break;
             }
         } catch (Exception $e) {
-            if ('clone' !== $this->action || ('clone' === $this->action && $this->themeDirCreated)) {
+            if (($this->packageDirCreated || $this->themeDirCreated) && $this->packageDirectoryExists()) {
+                $this->fh->removeAll($this->pkgDir, true);
+            } elseif ($this->themeDirCreated && $this->themeDirectoryExists()) {
                 $this->fh->removeAll($this->destDir, true);
             }
+
             throw $e;
         }
 
@@ -108,21 +149,104 @@ class ElementalClonerTool
         return $ret;
     }
 
-    protected function cloneTheme()
+    protected function buildPackage()
     {
         if (empty($this->token) || !$this->valt->validate('create_elemental_clone', $this->token)) {
             throw new Exception(
                 t("This is embarassing! Could you reload the page and try again please?")
             );
         }
+        \Log::addEntry('starting package');
 
-        if ($this->themeDirectoryExists()) {
+        if (!$this->buildPackage || !$this->vals->notEmpty($this->pkgHandle)) {
+            return false;
+        }
+
+        if ($this->packageDirectoryExists()) {
             throw new Exception(
                 t(
-                    'A theme with handle %s already exists in the application/themes directory. Please use a different handle.',
-                    '&ldquo;' . $this->destDir . '&rdquo;'
+                    'A package with handle %s already exists in the packages directory. Please use a different handle.',
+                    '&ldquo;' . $this->pkgHandle . '&rdquo;'
                 )
             );
+        }
+
+        $dirCreated = $this->fs->createDir(
+            $this->pkgDir . '/themes',
+            ['visibility' => AdapterInterface::VISIBILITY_PUBLIC]
+        );
+        $this->packageDirCreated = true;
+        if (!$dirCreated) {
+            throw new Exception(
+                t(
+                    "Unable to create the package directory %s . Permissions might be set incorrectly at the server's level?",
+                    '&ldquo;' . $this->pkgDir . '&rdquo;'
+                )
+            );
+        }
+        \Log::addEntry('building package');
+
+        $pkgControllerIsSaved = false;
+
+        $pkgController = $this->fs->read(
+            DIRNAME_PACKAGES . '/' . ELEMENTAL_CLONER_PACKAGE_HANDLE . '/template/controller.php.tmpl'
+        );
+        $search = [
+            "{{package_camel_handle}}",
+            "{{package_handle}}",
+            "{{package_app_version_required}}",
+            "{{package_version}}",
+            "{{package_description}}",
+            "{{package_name}}",
+            "{{theme_handle}}",
+        ];
+        $replace = [
+            camelcase($this->pkgHandle),
+            $this->pkgHandle,
+            $this->pkgAppVersion,
+            $this->pkgVersion,
+            $this->pkgDescription,
+            $this->pkgName,
+            $this->themeHandle,
+        ];
+        $pkgController = str_replace($search, $replace, $pkgController);
+
+        $pkgControllerIsSaved = $this->fs->write(
+            $this->pkgDir . '/controller.php',
+            $pkgController,
+            ['visibility' => AdapterInterface::VISIBILITY_PUBLIC]
+        );
+
+        // Checking that the directory got created correctly
+        // if (!$this->packageDirectoryExists()) {
+        //     throw new Exception(
+        //         t(
+        //             "Unable to create the package's controller in %s . Permissions might be set incorrectly at the server's level?",
+        //             '&ldquo;' . $this->pkgDir . '&rdquo;'
+        //         )
+        //     );
+        // }
+
+        return $pkgControllerIsSaved;
+    }
+
+    protected function cloneTheme()
+    {
+        \Log::addEntry('starting cloning theme');
+        if (empty($this->token) || !$this->valt->validate('create_elemental_clone', $this->token)) {
+            throw new Exception(
+                t("This is embarassing! Could you reload the page and try again please?")
+            );
+        }
+        if (!$this->buildPackage || !$this->vals->notEmpty($this->pkgHandle)) {
+            if ($this->themeDirectoryExists()) {
+                throw new Exception(
+                    t(
+                        'A theme with handle %s already exists in the application/themes directory. Please use a different handle.',
+                        '&ldquo;' . $this->destDir . '&rdquo;'
+                    )
+                );
+            }
         }
 
         // Themes can be in application/themes so the check above suffices
@@ -132,11 +256,11 @@ class ElementalClonerTool
 
         $installedThemesHandles = Theme::getInstalledHandles();
 
-        if (in_array($this->handle, $installedThemesHandles)) {
+        if (in_array($this->themeHandle, $installedThemesHandles)) {
             throw new Exception(
                 t(
                     'A theme with handle %s is already installed. Please use a different handle.',
-                    '&ldquo;' . $this->handle . '&rdquo;'
+                    '&ldquo;' . $this->themeHandle . '&rdquo;'
                 )
             );
         }
@@ -199,13 +323,19 @@ class ElementalClonerTool
             $nameFunction = false;
             $descFunction = false;
 
+            if ($this->buildPackage && $this->vals->notEmpty($this->pkgHandle)) {
+                $namespace = 'Concrete\Package\\' . camelcase($this->pkgHandle) . '\Theme\\' . camelcase($this->themeHandle);
+            } else {
+                $namespace = 'Application\Theme\\' . camelcase($this->themeHandle);
+            }
+
             foreach ($pageTheme as $index => $line) {
                 if (!$namespaceIsReplaced
                     && $this->contains('namespace', $line, false)
                     && $this->contains('Concrete\Theme\Elemental', $line, true)
                 ) {
                     $namespaceIsReplaced = true;
-                    $pageTheme[$index] = str_replace('Concrete\Theme\Elemental', 'Application\Theme\\' . camelcase($this->handle), $line);
+                    $pageTheme[$index] = str_replace('Concrete\Theme\Elemental', $namespace, $line);
                     continue;
                 }
 
@@ -254,13 +384,20 @@ class ElementalClonerTool
                 ['visibility' => AdapterInterface::VISIBILITY_PUBLIC]
             );
 
+            $pkgExtraFolder = '';
+            if ($this->buildPackage && $this->vals->notEmpty($this->pkgHandle)) {
+                $pkgExtraFolder = '../';
+            }
+
             // Update main.less to load core LESS file properly
             // new "../../../../concrete/css/build/core/include/mixins.less";
             // old "../../../css/build/core/include/mixins.less";
             $mainLess = $this->fs->read($this->destDir . '/css/main.less');
+
+            // Whether it's in application or in packages the new path to the core is the same
             $mainLess = str_replace(
                 "../../../css/build/core/include/mixins.less",
-                "../../../../concrete/css/build/core/include/mixins.less",
+                $pkgExtraFolder . "../../../../concrete/css/build/core/include/mixins.less",
                 $mainLess
             );
 
@@ -276,29 +413,62 @@ class ElementalClonerTool
 
     protected function customizeThumb()
     {
+        $data = [];
+        $data['theme'] = [
+            'source' => $this->thumbSource,
+            'file' => $this->filename,
+            'fID' => $this->fID,
+            'width' => '360',
+            'height' => '270',
+            'destination' => $this->destDir . '/thumbnail.png',
+        ];
+
+        if ($this->buildPackage && $this->vals->notEmpty($this->pkgHandle)) {
+            $data['package'] = [
+                'source' => $this->pkgThumbSource,
+                'file' => $this->pkgIcon,
+                'fID' => $this->pkgfID,
+                'width' => '97',
+                'height' => '97',
+                'destination' => $this->pkgDir . '/icon.png',
+            ];
+        }
+        \Log::addEntry('thumb data is ' . json_encode($data));
         $im = $this->app->make('helper/image');
         $ret = false;
+        $func = false;
+        foreach ($data as $key => $value) {
+            if ('upload' === $value['source'] && $this->vals->notEmpty($value['file'])) {
+                $image = $this->fh->getTemporaryDirectory() . '/elementalcloner/' . $value['file'];
+                $func = 'rename';
+            } elseif ('manager' === $value['source'] && (int) $value['fID'] > 0) {
+                $image = File::getByID($value['fID']);
+                $func = 'copy';
+            }
 
-        if ('upload' === $this->thumbSource && $this->vals->notEmpty($this->filename)) {
-            $image = DIR_FILES_UPLOADED_STANDARD . '/tmp/elementalcloner/' . $this->filename;
-            $func = 'rename';
-        } elseif ('manager' === $this->thumbSource && (int) $this->fID > 0) {
-            $image = File::getByID($this->fID);
-            $func = 'copy';
-        }
+            if (!$func) {
+                continue;
+            }
+            $thumb = $im->getThumbnail($image, $value['width'], $value['height'], true);
+            if ('theme' === $key) {
+                $this->fs->delete($value['destination']);
+            }
 
-        $thumb = $im->getThumbnail($image, '360', '270', true);
-        $this->fs->delete($this->destDir . '/thumbnail.png');
-        $thumbSrc = ltrim((string) Url::createFromUrl($thumb->src)->getPath(), '/');
-        $relPath = trim($this->app->make('app_relative_path'), '/');
-        $thumbSrc = str_replace($relPath, '', $thumbSrc);
+            $thumbSrc = ltrim((string) Url::createFromUrl($thumb->src)->getPath(), '/');
+            $relPath = trim($this->app->make('app_relative_path'), '/');
+            $thumbSrc = str_replace($relPath, '', $thumbSrc);
 
-        $ret = $this->fs->$func($thumbSrc, $this->destDir . '/thumbnail.png');
+            $ret = $this->fs->$func($thumbSrc, $value['destination']);
 
-        if (!$ret) {
-            throw new Exception(
-                t("There was a problem setting up your new theme's thumbnail. Let's give it another try shall we?")
-            );
+            if (!$ret) {
+                $subject = 'theme' === $key ? t("your new theme's thumbnail") : t("your new package's icon");
+                throw new Exception(
+                    t(
+                        "There was a problem setting up %s. Let's give it another try shall we?",
+                        $subject
+                    )
+                );
+            }
         }
 
         return $ret;
@@ -347,11 +517,23 @@ class ElementalClonerTool
 
     protected function cleanup()
     {
+        $data = [];
+
         if ($this->vals->notEmpty($this->filename)) {
-            $image = REL_DIR_FILES_UPLOADED_STANDARD . '/tmp/elementalcloner/' . $this->filename;
-            $relPath = trim($this->app->make('app_relative_path'), '/');
-            $image = str_replace($relPath, '', $image);
-            $this->fs->delete($image);
+            $data[] = $this->filename;
+        }
+
+        if ($this->vals->notEmpty($this->pkgIcon)) {
+            $data[] = $this->pkgIcon;
+        }
+
+        if (count($data) > 0) {
+            foreach ($data as $file) {
+                $image = REL_DIR_FILES_UPLOADED_STANDARD . '/tmp/elementalcloner/' . $file;
+                $relPath = trim($this->app->make('app_relative_path'), '/');
+                $image = str_replace($relPath, '', $image);
+                $this->fs->delete($image);
+            }
         }
     }
 

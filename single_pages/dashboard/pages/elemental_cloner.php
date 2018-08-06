@@ -58,7 +58,8 @@ $valt = $app->make('helper/validation/token');
     -webkit-box-shadow: none;
      box-shadow: none;
 }
-#upload-message {
+#upload-message,
+#pkg-upload-message {
     opacity: 0;
     margin-bottom: 0;
     padding: 25px;
@@ -74,7 +75,8 @@ $valt = $app->make('helper/validation/token');
     display: block;
     width: 100%;
 }
-#upload-message.showing {
+#upload-message.showing,
+#pkg-upload-message.showing {
     opacity: 1;
     transform: translateY(0);
 }
@@ -94,6 +96,9 @@ $valt = $app->make('helper/validation/token');
     font-size: 36px;
     text-align: center;
     color: #999;
+}
+.package-data {
+    display: none;
 }
 /* Fixes for IE < 8 */
 @media screen\9 {
@@ -122,15 +127,16 @@ if (isset($errors)) {
 <?php
     echo $app->make('helper/concrete/ui')->tabs(
         [
-            ['settings', t('Settings'), true],
+            ['settings', t('Theme Settings'), true],
+            ['package', t('Package Settings')],
             ['support', t('Support')],
         ]
     );
 ?>
 
-<div id="ccm-tab-content-settings" class="ccm-tab-content">
-    <div class="ccm-dashboard-content">
-        <form id="elemental-cloner" method="post" action="<?php echo $view->action('run'); ?>">
+<form id="elemental-cloner" method="post" action="<?php echo $view->action('run'); ?>">
+    <div id="ccm-tab-content-settings" class="ccm-tab-content">
+        <div class="ccm-dashboard-content">
             <?php echo $valt->output('create_elemental_clone'); ?>
             <div class="row">
                 <div class="col-sm-6">
@@ -146,7 +152,7 @@ if (isset($errors)) {
                     <div class="form-group">
                         <?php echo $form->label('themeName', t("Theme's name")); ?>
                         <?php echo $form->text('themeName', null); ?>
-                        <div class="help-block"><?php echo t("If left empty will be inferred from the handle"); ?></div>
+                        <div class="help-block"><?php echo t("If left empty it will be inferred from the handle"); ?></div>
                     </div>
                 </div>
                 <div class="col-sm-12">
@@ -175,7 +181,7 @@ if (isset($errors)) {
             </div>
             <div class="row form-group box-wrapper thumb-uploader">
                 <div class="col-sm-12">
-                    <div class="fileinput-box">
+                    <div class="fileinput-box themeThumb">
                         <span class="drop-box-msg"><?php echo t("Drop a PNG or JPG image file here or click to upload"); ?></span>
                         <?php echo $form->label('themeThumb', t("Select your theme's thumbnail from your computer"), ['class' => 'sr-only']); ?>
                         <input type="file" id="themeThumb" name="themeThumb">
@@ -195,15 +201,100 @@ if (isset($errors)) {
                     </div>
                 </div>
             </div>
-            <div class="ccm-dashboard-form-actions-wrapper">
-                <div class="ccm-dashboard-form-actions">
-                    <button id="clone-theme" class="clone-theme pull-right btn btn-success" type="submit" ><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;<?php echo t('Build your theme'); ?></button>
+        </div>
+    </div>
+
+    <div id="ccm-tab-content-package" class="ccm-tab-content">
+        <div class="ccm-dashboard-content">
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="form-group">
+                        <?php echo $form->label('buildPackage', t("Would you like to package your theme?")); ?>
+                        <?php echo $form->select('buildPackage', [0 => t("No, put it in my %s", '&ldquo;application/themes directory&rdquo;'), 1 => t("Yes, package my theme")], null); ?>
+                    </div>
                 </div>
             </div>
-        </form>
+            <div class="package-data clearfix">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgHandle', t("Package's handle")); ?>
+                            <?php echo $form->text('pkgHandle', null); ?>
+                            <small class="center-block text-danger">
+                                <?php echo t("%s A valid and unique handle is required", '<i class="fa fa-star"></i>'); ?>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgName', t("Package's name")); ?>
+                            <?php echo $form->text('pkgName', null); ?>
+                            <div class="help-block"><?php echo t("If left empty it will be inferred from the handle"); ?></div>
+                        </div>
+                    </div>
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgDescription', t("Package's description")); ?>
+                            <?php echo $form->text('pkgDescription', null); ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgVersion', t("Package's version number")); ?>
+                            <?php echo $form->text('pkgVersion', null); ?>
+                            <div class="help-block"><?php echo t("If left empty it will be %s", '&ldquo;0.9&rdquo;'); ?></div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgAppVersion', t("Minimum Concrete5 version required")); ?>
+                            <?php echo $form->text('pkgAppVersion', null); ?>
+                            <div class="help-block"><?php echo t("If left empty it will be %s", '&ldquo;8.0.0&rdquo;'); ?></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgThumbSource', t("Get the package's icon")); ?>
+                            <?php echo $form->select('pkgThumbSource', ['upload' => t("From my computer"), 'manager' => t("From the file manager")], null); ?>
+                            <div class="help-block"><?php echo t("The icon will be resized to %s", '97 x 97'); ?></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row form-group box-wrapper pkg-thumb-uploader">
+                    <div class="col-sm-12">
+                        <div class="fileinput-box pkgThumb">
+                            <span class="drop-box-msg"><?php echo t("Drop a PNG or JPG image file here or click to upload"); ?></span>
+                            <?php echo $form->label('pkgThumb', t("Select your package's icon from your computer"), ['class' => 'sr-only']); ?>
+                            <input type="file" id="pkgThumb" name="pkgThumb">
+                            <input type="hidden" id="pkg-uploaded-filename" name="pkgIcon" value="">
+                            <div id="pkg-progress-wrapper" class="cloner-process-progress">
+                                <div id="pkg-progress" class="progress cloner-progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar progress-bar-warning" style="width:0%;"></div></div>
+                            </div>
+                            <div id="pkg-upload-message" class="files"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row pkg-thumb-manager">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <?php echo $form->label('pkgfID', t("Select your package's icon from the file manager"), ['class' => 'sr-only']); ?>
+                            <?php echo $al->image('pkg-manager-filename', 'pkgfID', t('Choose Image'), null); ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-
+    <div class="ccm-dashboard-form-actions-wrapper">
+        <div class="ccm-dashboard-form-actions">
+            <button id="clone-theme" class="clone-theme pull-right btn btn-success" type="submit" ><i class="fa fa-wrench" aria-hidden="true"></i>&nbsp;<?php echo t('Build your theme'); ?></button>
+        </div>
+    </div>
+</form>
 <?php
 \View::element('kalmoya_support_tab', ['kalmoya' => $kalmoya], $kalmoya->pkgHandle);
 ?>
@@ -213,92 +304,93 @@ if (isset($errors)) {
         'use strict';
         // managing thumbnail import
         // Change this to the location of your server-side upload handler:
-        $('#themeThumb').fileupload({
-            url: '<?php echo \View::url("/elementalcloner/uploadThumb"); ?>',
-            dataType: 'json',
-            error: function(r) {
-                $('#uploaded-filename').val(null);
-                $('#upload-message').removeClass('alert-success').addClass('alert alert-danger showing');
-                $('#progress .progress-bar').css(
-                    'width',
-                    '0%'
-                );
-                var message = r.responseText;
+        var setupImageUploader = function(input, prefix) {
+            prefix = prefix || '';
+            var filename = $('#' + prefix + 'uploaded-filename');
+            var messagebox = '#' + prefix + 'upload-message';
+            var progressbar = $('#' + prefix + 'progress');
+            var dropzone = $('.fileinput-box.' + input);
+            var url = '<?php echo \View::url("/elementalcloner/uploadThumb/uploadinput"); ?>';
+            url = url.replace('uploadinput', input);
+            $('#' + input).fileupload({
+                url: url,
+                dropZone: dropzone,
+                dataType: 'json',
+                error: function(r) {
+                    filename.val(null);
+                    $(messagebox).removeClass('alert-success').addClass('alert alert-danger showing');
+                    progressbar.find('.progress-bar').css(
+                        'width',
+                        '0%'
+                    );
+                    var message = r.responseText;
 
-                try {
-                    message = jQuery.parseJSON(message).errors;
-                    $('#upload-message').empty();
-                    _(message).each(function(error) {
-                        $('<p/>').html(error).appendTo('#upload-message');
-                    });
-                } catch (e) {
-                    message = message.split('<br />');
-                    $('#upload-message').html(message[message.length - 1]);
+                    try {
+                        message = jQuery.parseJSON(message).errors;
+                        $(messagebox).empty();
+                        _(message).each(function(error) {
+                            $('<p/>').html(error).appendTo(messagebox);
+                        });
+                    } catch (e) {
+                        message = message.split('<br />');
+                        $(messagebox).html(message[message.length - 1]);
+                    }
+                },
+                done: function (e, data) {
+                    $(messagebox).removeClass('alert-danger').addClass('alert alert-success showing');
+                    if (data.result.file && data.result.file.length) {
+                        $(messagebox).empty();
+                        $.each(data.result.file, function (index, file) {
+                            filename.val(file.name);
+                            $('<p/>').html(file.name + " <?php echo t('uploaded successfully'); ?>").appendTo(messagebox);
+                        });
+                    }
+
+                    progressbar.find('.progress-bar').css(
+                        'width',
+                        '100%'
+                    );
+
+                },
+                progressall: function (e, data) {
+                    var progress = parseInt(data.loaded * 0.85 / data.total * 100, 10);
+                    progressbar.find('.progress-bar').css(
+                        'width',
+                        progress + '%'
+                    );
+                },
+                always: function (e, data) {
+                    $('.ccm-dashboard-form-actions #clone-theme').removeProp('disabled');
+                },
+                change: function() {
+                    progressbar.find('.progress-bar').css(
+                        'width',
+                        '0%'
+                    );
+                    $(messagebox).removeClass('showing').empty();
+
+                },
+                start: function() {
+                    progressbar.find('.progress-bar').css(
+                        'width',
+                        '0%'
+                    );
+                    $(messagebox).removeClass('showing').empty();
+                    $('.ccm-dashboard-form-actions #clone-theme').prop('disabled', true);
                 }
-            },
-            done: function (e, data) {
-                $('#upload-message').removeClass('alert-danger').addClass('alert alert-success showing');
-                if (data.result.file && data.result.file.length) {
-                    $('#upload-message').empty();
-                    $.each(data.result.file, function (index, file) {
-                        $('#uploaded-filename').val(file.name);
-                        $('<p/>').html(file.name + " <?php echo t('uploaded successfully'); ?>").appendTo('#upload-message');
-                    });
-                }
+            }).prop('disabled', !$.support.fileInput)
+                .parent().addClass($.support.fileInput ? undefined : 'disabled');
 
-                $('#progress .progress-bar').css(
-                    'width',
-                    '100%'
-                );
-
-            },
-            progressall: function (e, data) {
-                var progress = parseInt(data.loaded * 0.85 / data.total * 100, 10);
-                $('#progress .progress-bar').css(
-                    'width',
-                    progress + '%'
-                );
-            },
-            always: function (e, data) {
-                $('.ccm-dashboard-form-actions #clone-theme').removeProp('disabled');
-            },
-            change: function() {
-                $('#progress .progress-bar').css(
-                    'width',
-                    '0%'
-                );
-                $('#upload-message').removeClass('showing').empty();
-
-            },
-            start: function() {
-                $('#progress .progress-bar').css(
-                    'width',
-                    '0%'
-                );
-                $('#upload-message').removeClass('showing').empty();
-                $('.ccm-dashboard-form-actions #clone-theme').prop('disabled', true);
-            }
-        }).prop('disabled', !$.support.fileInput)
-            .parent().addClass($.support.fileInput ? undefined : 'disabled');
-
-        $("#themeThumb").bind('fileuploadsubmit', function (e, data) {
+            $('#' + input).bind('fileuploadsubmit', function (e, data) {
             data.formData = {
-                ccm_token: '<?php echo $app->make("token")->generate("upload_theme_thumb"); ?>',
+                ccm_token: '<?php echo $app->make("token")->generate("upload_theme_and_pkg_thumb"); ?>',
             }
         });
-
-        if ($('#uploaded-filename').val()) {
-            $('#upload-message').removeClass('alert-danger').addClass('alert alert-success showing').empty();
-            $('<p/>').html($('#uploaded-filename').val() + " <?php echo t('uploaded successfully'); ?>").appendTo('#upload-message');
-
-            $('.ccm-dashboard-form-actions #clone-theme').removeProp('disabled');
-            $('.next-wrapper').show();
-
-            $('#progress .progress-bar').css(
-                'width',
-                '100%'
-            );
         }
+
+        // setting up file uploaders
+        setupImageUploader('themeThumb');
+        setupImageUploader('pkgThumb', 'pkg-');
 
         // managing theme cloning
         var elementalCloner = {
@@ -356,7 +448,10 @@ if (isset($errors)) {
                             }
                         } else {
                             var operationStatusLabel = "<?php echo t("Cloning Elemental%s", '&hellip;'); ?>";
-
+                            var buildPackage = (params.buildPackage == '1');
+                            if (buildPackage) {
+                                operationStatusLabel = "<?php echo t("Building a package%s", '&hellip;'); ?>";
+                            }
                             var pNotifyText = '<div><span id="ccm-progressive-operation-status">' + operationStatusLabel + '</span></div>';
                             pNotifyText += '<div id="cloner-progress-wrapper" class="cloner-process-progress"><div id="progress" class="progress progress-striped active" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar progress-bar-warning" style="width:0%;"></div></div></div>';
                             pNotifyText += '<br><div id="ccm-progressive-operation-refresh-warning" class="small"><i class="fa fa-exclamation-circle"></i>&nbsp;<?php echo t("Operation in progress%s please do not reload the page", '<br>'); ?></div>';
@@ -413,6 +508,9 @@ if (isset($errors)) {
                             if (r.action && r.actionNbr <= params.totalActions) {
                                 var operationStatusLabel;
                                 switch (r.action) {
+                                    case 'clone':
+                                        operationStatusLabel = "<?php echo t("Cloning Elemental%s", '&hellip;'); ?>";
+                                        break;
                                     case 'customize':
                                         operationStatusLabel = "<?php echo t("Customizing your theme's information%s", '&hellip;'); ?>";
                                         break;
@@ -472,21 +570,6 @@ if (isset($errors)) {
 
                     }).fail(function(xhr, status, r) {
                         var text;
-                        // if (status === 'parsererror') {
-                        //     text = "<?php echo t('Requested JSON parse failed.'); ?>";
-                        // } else if (status === 'timeout') {
-                        //     text = "<?php echo t('Time out error.'); ?>";
-                        // } else if (status === 'abort') {
-                        //     text = "<?php echo t('Ajax request aborted.'); ?>";
-                        // } else if (0 === xhr.status) {
-                        //     text = "<?php echo t('Not connected.\n Verify Network.'); ?>";
-                        // } else if (404 == xhr.status) {
-                        //     text = "<?php echo t('Requested page not found. [404]'); ?>";
-                        // } else if (500 == xhr.status) {
-                        //     text = "<?php echo t('Internal Server Error [500].'); ?>";
-                        // } else {
-                        //     text = ConcreteAjaxRequest.errorResponseToString(xhr);
-                        // }
 
                         switch (status) {
                             case 'timeout':
@@ -519,9 +602,31 @@ if (isset($errors)) {
         });
         $('#thumbSource').trigger('change');
 
+        $('#pkgThumbSource').on('change', function(evt) {
+            if ($(this).val() == 'upload') {
+                $('.pkg-thumb-uploader').slideDown();
+                $('.pkg-thumb-manager').slideUp();
+            } else {
+                $('.pkg-thumb-uploader').slideUp();
+                $('.pkg-thumb-manager').slideDown();
+            }
+        });
+        $('#pkgThumbSource').trigger('change');
+
+        $('#buildPackage').on('change', function(evt) {
+            if ($(this).val() == '1') {
+                $('.package-data').slideDown();
+            } else {
+                $('.package-data').slideUp();
+            }
+        });
+
+
         $(document).ready(function() {
-            var fileSelector = $('.thumb-manager').find('[data-file-selector="manager-filename"]'),
-                fileSelectorTemplate = fileSelector.html();
+            var themeFileSelector = $('.thumb-manager').find('[data-file-selector="manager-filename"]'),
+                themeFileSelectorTemplate = themeFileSelector.html(),
+                pkgFileSelector = $('.pkg-thumb-manager').find('[data-file-selector="pkg-manager-filename"]'),
+                pkgFileSelectorTemplate = pkgFileSelector.html();
 
             function htmlDecode(text){
                 return $('<div/>').html(text).text();
@@ -530,17 +635,39 @@ if (isset($errors)) {
             var resetCloner = function() {
                 $("#elemental-cloner").get(0).reset();
                 $('#uploaded-filename').val(null);
+                $('#pkg-uploaded-filename').val(null);
                 $('input[type=hidden][name=fID]').val(0);
-                fileSelector.html(fileSelectorTemplate);
+                $('input[type=hidden][name=pkgfID]').val(0);
+                themeFileSelector.html(themeFileSelectorTemplate);
+                pkgFileSelector.html(pkgFileSelectorTemplate);
 
                 $('#progress .progress-bar').css(
                     'width',
                     '0%'
                 );
-                $('#upload-message').removeClass('showing').empty();
+                $('#pkg-progress .progress-bar').css(
+                    'width',
+                    '0%'
+                );
 
+                $('#upload-message').removeClass('showing').empty();
+                $('#pkg-upload-message').removeClass('showing').empty();
+
+                $('a[data-tab="settings"]').trigger('click');
                 $('#thumbSource').trigger('change');
+                $('#pkgThumbSource').trigger('change');
+                $('#buildPackage').trigger('change');
             }
+
+            $('a[data-tab]').on ('click', function() {
+                var tab = $(this).attr('data-tab');
+                if (tab === 'support') {
+                    $('.ccm-dashboard-form-actions-wrapper').hide();
+                } else {
+                    $('.ccm-dashboard-form-actions-wrapper').fadeIn(350);
+                }
+            });
+
             $("#elemental-cloner").on("submit", function(e) {
                 e.preventDefault();
                 if (!elementalCloner.generating) {

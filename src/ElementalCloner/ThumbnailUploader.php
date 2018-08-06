@@ -37,8 +37,6 @@ class ThumbnailUploader extends Controller
      */
     protected $filesystem = null;
 
-    protected $tmpDir = DIR_FILES_UPLOADED_STANDARD . '/tmp/elementalcloner';
-
     /**
      * Get the Filesystem instance to use.
      *
@@ -89,12 +87,13 @@ class ThumbnailUploader extends Controller
         }
 
         try {
+            $tmpDir = $fi->getTemporaryDirectory() . '/elementalcloner';
             $uploadedFile = new UploadedFile($pointer, $sanitizedFilename);
-            $uploadedFile->move($this->tmpDir, $sanitizedFilename);
+            $uploadedFile->move($tmpDir, $sanitizedFilename);
             $dataInfo = [];
         } catch (Exception $e) {
             $fs = $this->getFilesystem();
-            $fs->delete($this->tmpDir . '/' . $sanitizedFilename);
+            $fs->delete($tmpDir . '/' . $sanitizedFilename);
             throw $e;
         }
         $dataInfo['sanitizedFilename'] = $sanitizedFilename;
@@ -102,7 +101,7 @@ class ThumbnailUploader extends Controller
         return $dataInfo;
     }
 
-    public function uploadThumb()
+    public function uploadThumb($input)
     {
         /** @var ResponseFactory $responseFactory */
         $responseFactory = $this->app->make(ResponseFactory::class);
@@ -114,13 +113,13 @@ class ThumbnailUploader extends Controller
                 }
             }
 
-            if (!$this->app->make('helper/validation/token')->validate('upload_theme_thumb')) {
+            if (!$this->app->make('helper/validation/token')->validate('upload_theme_and_pkg_thumb')) {
                 throw new Exception($this->app->make('helper/validation/token')->getErrorMessage(), 401);
             }
 
-            $filesArchive = $this->request->files->get('themeThumb');
+            $filesArchive = $this->request->files->get($input);
             if (isset($filesArchive)) {
-                $files[] = $this->handleUpload('themeThumb');
+                $files[] = $this->handleUpload($input);
             }
         } catch (Exception $e) {
             if ($code = $e->getCode()) {

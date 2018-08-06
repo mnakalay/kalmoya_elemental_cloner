@@ -13,7 +13,7 @@ class Controller extends Package
 {
     protected $pkgHandle = 'kalmoya_elemental_cloner';
     protected $appVersionRequired = '8.0.0';
-    protected $pkgVersion = '1.0.1';
+    protected $pkgVersion = '1.2.0';
 
     protected $pkgAutoloaderRegistries = [
         'vendor/kalmoya' => '\ElClKalmoya',
@@ -34,7 +34,7 @@ class Controller extends Package
     {
         define('ELEMENTAL_CLONER_PACKAGE_HANDLE', $this->pkgHandle);
         Route::register(
-            '/elementalcloner/uploadThumb',
+            '/elementalcloner/uploadThumb/{input}',
             '\KalmoyaElementalCloner\ThumbnailUploader::uploadThumb'
         );
     }

@@ -18,12 +18,12 @@ class KalmoyaInfo extends Controller
     protected static $kalmoyaWebsite = 'https://kalmoya.com';
 
 //    [NOUR] Modify per package
-   protected static $pkgMarketHandle = 'elemental-cloner';
+    protected static $pkgMarketHandle = 'elemental-cloner';
 
     public function __construct($pkgHandle)
     {
         self::$pkgHandle = $pkgHandle;
-        self::$pkg = Package::getByHandle(self::$pkgHandle);
+        self::$pkg = Package::getByHandle($pkgHandle);
         // self::$config = $package->getConfig();
     }
 
