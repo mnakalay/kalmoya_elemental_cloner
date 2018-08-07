@@ -606,7 +606,7 @@ if (isset($errors)) {
             if ($(this).val() == 'upload') {
                 $('.pkg-thumb-uploader').slideDown();
                 $('.pkg-thumb-manager').slideUp();
-            } else {
+            } else if ($(this).val() == 'manager') {
                 $('.pkg-thumb-uploader').slideUp();
                 $('.pkg-thumb-manager').slideDown();
             }

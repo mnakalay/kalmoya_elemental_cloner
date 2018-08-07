@@ -141,8 +141,14 @@ class ElementalClonerTool
             throw $e;
         }
 
-        if ($ret && $doCleanup) {
-            $this->cleanup();
+        try {
+            if ($ret && $doCleanup) {
+                $this->cleanup();
+            }
+        } catch (Exception $e) {
+            throw new Exception(
+                t("There was a problem cleaning up the images you uploaded to the server but your theme was built succesfully so nothing to worry about")
+            );
         }
 
         return $ret;
@@ -433,6 +439,7 @@ class ElementalClonerTool
         $im = $this->app->make('helper/image');
         $ret = false;
         $func = false;
+        $delete = [];
         foreach ($data as $key => $value) {
             if ('upload' === $value['source'] && $this->vals->notEmpty($value['file'])) {
                 $image = $this->fh->getTemporaryDirectory() . '/elementalcloner/' . $value['file'];
@@ -453,7 +460,6 @@ class ElementalClonerTool
             $thumbSrc = ltrim((string) Url::createFromUrl($thumb->src)->getPath(), '/');
             $relPath = trim($this->app->make('app_relative_path'), '/');
             $thumbSrc = str_replace($relPath, '', $thumbSrc);
-
             $ret = $this->fs->$func($thumbSrc, $value['destination']);
 
             if (!$ret) {
@@ -528,7 +534,9 @@ class ElementalClonerTool
                 $image = REL_DIR_FILES_UPLOADED_STANDARD . '/tmp/elementalcloner/' . $file;
                 $relPath = trim($this->app->make('app_relative_path'), '/');
                 $image = str_replace($relPath, '', $image);
-                $this->fs->delete($image);
+                if ($this->fs->has($image)) {
+                    $this->fs->delete($image);
+                }
             }
         }
     }
