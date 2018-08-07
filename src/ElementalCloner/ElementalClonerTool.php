@@ -77,7 +77,6 @@ class ElementalClonerTool
             $this->buildPackage = $buildPackage;
             $this->pkgDir = DIRNAME_PACKAGES . '/' . $pkgHandle;
             $this->destDir = $this->pkgDir . '/' . DIRNAME_THEMES . '/' . $handle;
-            \Log::addEntry('dest is ' . $this->destDir);
         } else {
             $this->destDir = DIRNAME_APPLICATION . '/' . DIRNAME_THEMES . '/' . $handle;
         }
@@ -156,7 +155,6 @@ class ElementalClonerTool
                 t("This is embarassing! Could you reload the page and try again please?")
             );
         }
-        \Log::addEntry('starting package');
 
         if (!$this->buildPackage || !$this->vals->notEmpty($this->pkgHandle)) {
             return false;
@@ -184,7 +182,6 @@ class ElementalClonerTool
                 )
             );
         }
-        \Log::addEntry('building package');
 
         $pkgControllerIsSaved = false;
 
@@ -232,7 +229,6 @@ class ElementalClonerTool
 
     protected function cloneTheme()
     {
-        \Log::addEntry('starting cloning theme');
         if (empty($this->token) || !$this->valt->validate('create_elemental_clone', $this->token)) {
             throw new Exception(
                 t("This is embarassing! Could you reload the page and try again please?")
@@ -433,7 +429,7 @@ class ElementalClonerTool
                 'destination' => $this->pkgDir . '/icon.png',
             ];
         }
-        \Log::addEntry('thumb data is ' . json_encode($data));
+
         $im = $this->app->make('helper/image');
         $ret = false;
         $func = false;

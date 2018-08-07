@@ -13,7 +13,7 @@ class Controller extends Package
 {
     protected $pkgHandle = 'kalmoya_elemental_cloner';
     protected $appVersionRequired = '8.0.0';
-    protected $pkgVersion = '1.2.0';
+    protected $pkgVersion = '1.2.1';
 
     protected $pkgAutoloaderRegistries = [
         'vendor/kalmoya' => '\ElClKalmoya',
