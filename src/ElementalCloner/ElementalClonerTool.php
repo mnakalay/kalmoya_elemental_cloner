@@ -452,6 +452,7 @@ class ElementalClonerTool
             if (!$func) {
                 continue;
             }
+
             $thumb = $im->getThumbnail($image, $value['width'], $value['height'], true);
             if ('theme' === $key) {
                 $this->fs->delete($value['destination']);

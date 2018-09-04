@@ -159,6 +159,7 @@ if (isset($errors)) {
                     <div class="form-group">
                         <?php echo $form->label('themeDescription', t("Theme's description")); ?>
                         <?php echo $form->text('themeDescription', null); ?>
+                        <div class="help-block"><?php echo t("If left empty, Elemental's original description will be used"); ?></div>
                     </div>
                 </div>
             </div>
@@ -174,8 +175,8 @@ if (isset($errors)) {
                 <div class="col-sm-12">
                     <div class="form-group">
                         <?php echo $form->label('thumbSource', t("Get the theme's thumbnail")); ?>
-                        <?php echo $form->select('thumbSource', ['upload' => t("From my computer"), 'manager' => t("From the file manager")], null); ?>
-                        <div class="help-block"><?php echo t("The thumbnail will be resized to %s", '360 x 270'); ?></div>
+                        <?php echo $form->select('thumbSource', ['none' => t("From Elemental's own thumbnail"), 'upload' => t("From my computer"), 'manager' => t("From the file manager")], null); ?>
+                        <div class="help-block thumbSource"><?php echo t("Your image will be resized to %s", '360 x 270 pixels'); ?></div>
                     </div>
                 </div>
             </div>
@@ -259,8 +260,8 @@ if (isset($errors)) {
                     <div class="col-sm-12">
                         <div class="form-group">
                             <?php echo $form->label('pkgThumbSource', t("Get the package's icon")); ?>
-                            <?php echo $form->select('pkgThumbSource', ['upload' => t("From my computer"), 'manager' => t("From the file manager")], null); ?>
-                            <div class="help-block"><?php echo t("The icon will be resized to %s", '97 x 97'); ?></div>
+                            <?php echo $form->select('pkgThumbSource', ['none' => t("From Concrete5 default package icon"), 'upload' => t("From my computer"), 'manager' => t("From the file manager")], null); ?>
+                            <div class="help-block pkgThumbSource"><?php echo t("Your image will be resized to %s", '97 x 97 pixels'); ?></div>
                         </div>
                     </div>
                 </div>
@@ -595,9 +596,15 @@ if (isset($errors)) {
             if ($(this).val() == 'upload') {
                 $('.thumb-uploader').slideDown();
                 $('.thumb-manager').slideUp();
-            } else {
+                $('.help-block.thumbSource').fadeIn();
+            } else if ($(this).val() == 'manager') {
                 $('.thumb-uploader').slideUp();
                 $('.thumb-manager').slideDown();
+                $('.help-block.thumbSource').fadeIn();
+            } else {
+                $('.thumb-uploader').slideUp();
+                $('.thumb-manager').slideUp();
+                $('.help-block.thumbSource').fadeOut();
             }
         });
         $('#thumbSource').trigger('change');
@@ -606,9 +613,15 @@ if (isset($errors)) {
             if ($(this).val() == 'upload') {
                 $('.pkg-thumb-uploader').slideDown();
                 $('.pkg-thumb-manager').slideUp();
+                $('.help-block.pkgThumbSource').fadeIn();
             } else if ($(this).val() == 'manager') {
                 $('.pkg-thumb-uploader').slideUp();
                 $('.pkg-thumb-manager').slideDown();
+                $('.help-block.pkgThumbSource').fadeIn();
+            } else {
+                $('.pkg-thumb-uploader').slideUp();
+                $('.pkg-thumb-manager').slideUp();
+                $('.help-block.pkgThumbSource').fadeOut();
             }
         });
         $('#pkgThumbSource').trigger('change');
