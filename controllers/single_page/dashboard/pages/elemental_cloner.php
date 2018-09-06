@@ -316,8 +316,12 @@ class ElementalCloner extends DashboardPageController
             $e->add(t("A theme handle is required."));
         }
 
+        if ($vals->notEmpty($args['handle']) && strtolower($args['handle']) !== $args['handle']) {
+            $e->add(t("Theme handles must be all lowercase and not contain any capital letters."));
+        }
+
         if ($vals->notEmpty($args['handle']) && !$vals->handle($args['handle'])) {
-            $e->add(t("Theme handles may only contain letters, numbers and underscore %s_%s characters", '&ldquo;', '&rdquo;'));
+            $e->add(t("Theme handles may only contain letters, numbers and underscore %s_%s characters.", '&ldquo;', '&rdquo;'));
         }
 
         if ((bool) $args['buildPackage']) {
@@ -325,8 +329,12 @@ class ElementalCloner extends DashboardPageController
                 $e->add(t("A package handle is required."));
             }
 
+            if ($vals->notEmpty($args['pkgHandle']) && strtolower($args['pkgHandle']) !== $args['pkgHandle']) {
+                $e->add(t("Package handles must be all lowercase and not contain any capital letters."));
+            }
+
             if ($vals->notEmpty($args['pkgHandle']) && !$vals->handle($args['pkgHandle'])) {
-                $e->add(t("Package handles may only contain letters, numbers and underscore %s_%s characters", '&ldquo;', '&rdquo;'));
+                $e->add(t("Package handles may only contain letters, numbers and underscore %s_%s characters.", '&ldquo;', '&rdquo;'));
             }
         }
 
